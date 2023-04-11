@@ -20,6 +20,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from glob import glob
 
+import cv2
+
 def get_argparser():
     parser = argparse.ArgumentParser()
 
@@ -51,13 +53,34 @@ def get_argparser():
                         help='batch size for validation (default: 4)')
     parser.add_argument("--crop_size", type=int, default=513)
 
-    
+
     parser.add_argument("--ckpt", default=None, type=str,
                         help="resume from checkpoint")
     parser.add_argument("--gpu_id", type=str, default='0',
                         help="GPU ID")
     return parser
+def solve(img, labels):
+    img_np = np.asarray(img)
+    img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+    # img_np = img.numpy()[0]
+    # img_np = img_np.transpose((1, 2, 0))
+    label = "car"
+    mask = (labels != label).astype(np.uint8)
+    cv2.imwrite("img.png", img_np)
 
+    mask = mask.astype(np.float32)
+
+    mask = cv2.GaussianBlur(mask, (3, 3), cv2.BORDER_DEFAULT)
+
+    masked_img = img_np * mask[..., None]
+    print(img_np.shape, mask.shape, masked_img.shape)
+    blurred = cv2.GaussianBlur(masked_img,(7,7), cv2.BORDER_DEFAULT)
+    cv2.imwrite("blur.png", blurred)
+    final_img = blurred + img_np * (1 - mask)[..., None]
+
+
+    cv2.imwrite("result.png", final_img)
+    
 def main():
     opts = get_argparser().parse_args()
     if opts.dataset.lower() == 'voc':
@@ -124,10 +147,16 @@ def main():
             ext = os.path.basename(img_path).split('.')[-1]
             img_name = os.path.basename(img_path)[:-len(ext)-1]
             img = Image.open(img_path).convert('RGB')
+            img_aux = img.copy()
             img = transform(img).unsqueeze(0) # To tensor of NCHW
             img = img.to(device)
-            
             pred = model(img).max(1)[1].cpu().numpy()[0] # HW
+
+            labels = Cityscapes.decode_label(pred)
+
+            solve(img_aux, labels)
+
+            print(labels)
             colorized_preds = decode_fn(pred).astype('uint8')
             colorized_preds = Image.fromarray(colorized_preds)
             if opts.save_val_results_to:

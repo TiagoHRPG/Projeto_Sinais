@@ -1,6 +1,5 @@
 __pycache__
 VOCdevkit
-checkpoints
 .vscode
 *.pyc
 .idea/

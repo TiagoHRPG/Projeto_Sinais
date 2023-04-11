@@ -63,6 +63,11 @@ class Cityscapes(data.Dataset):
     train_id_to_color = [c.color for c in classes if (c.train_id != -1 and c.train_id != 255)]
     train_id_to_color.append([0, 0, 0])
     train_id_to_color = np.array(train_id_to_color)
+    
+    train_id_to_label = [c.name for c in classes if (c.train_id != -1 and c.train_id != 255)]
+    train_id_to_label.append('None')
+    train_id_to_label = np.array(train_id_to_label)
+
     id_to_train_id = np.array([c.train_id for c in classes])
     
     #train_id_to_color = [(0, 0, 0), (128, 64, 128), (70, 70, 70), (153, 153, 153), (107, 142, 35),
@@ -111,6 +116,11 @@ class Cityscapes(data.Dataset):
         #target = target.astype('uint8') + 1
         return cls.train_id_to_color[target]
 
+    @classmethod
+    def decode_label(cls, target):
+        target[target == 255] = 19
+        return cls.train_id_to_label[target]
+        
     def __getitem__(self, index):
         """
         Args:
